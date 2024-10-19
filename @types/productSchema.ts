@@ -19,7 +19,8 @@ type ProductSchema = {
     product_categories: string,
     bucket_name: string;
     bucket_folder: string;
-    sizes_available?: ProductTypes[],
+    // sizes_available?: ProductTypes[],
+    sizes_available?: any,
     price?: number,
     product_available: boolean,
     type_product_sizes?: "letter" | "numeric",

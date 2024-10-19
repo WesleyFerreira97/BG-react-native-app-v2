@@ -1,29 +1,95 @@
-import { Image, StyleSheet, Platform, View, Text } from 'react-native';
-
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { View } from 'react-native';
 import { useSelect } from '@/hooks/useSelect';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ProductSchema } from '@/@types/productSchema';
+import { useThumbnails } from '@/hooks/useThumbnails';
+import { HeaderSearchBar } from '@/components/HeaderSearchBar';
+import { Colors } from '@/constants/Colors';
+import { ListItem } from '@/components/ListItem';
+import { FlatList, RefreshControl, TouchableOpacity } from 'react-native-gesture-handler';
+import { Button } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 
 export default function HomeScreen() {
-    // const { selectResponse, selectData, selectResponseError } = useSelect({
-    //     tableName: "products",
-    // selectColumns: ['title', 'bucket_name', 'bucket_folder', 'id'],
-    //     limit: 10,
-    // })
+    const [refreshing, setRefreshing] = useState(false);
+    const navigation = useNavigation();
+    const initialValue = {
+        tableName: "products",
+        selectColumns: ['title', 'bucket_name', 'bucket_folder', 'id'],
+        limit: 10,
+    }
+    const { selectResponse, selectData, selectResponseError } = useSelect<ProductSchema>(initialValue)
+
+    const { fetchThumbnailList, thumbList } = useThumbnails();
+
+    useEffect(() => {
+        if (!selectResponse) return;
+
+        const thumbData = Object.values(selectResponse).map((item) => {
+            return {
+                bucket_name: item.bucket_name,
+                bucket_folder: item.bucket_folder,
+                id: item.id
+            }
+        })
+
+        fetchThumbnailList(thumbData)
+    }, [selectResponse])
+
+    const onRefresh = () => {
+        setRefreshing(true);
+
+        selectData(initialValue)
+
+        setTimeout(() => {
+            setRefreshing(false);
+        }, 2000);
+    };
+
+    const handleNavigate = (id: string) => {
+        // navigation.navigate("", {itemId: id})
+    }
+
 
     return (
-        <ParallaxScrollView
-            headerBackgroundColor={{ light: '#A1CEDC', dark: '#2eabd1' }}
-            headerImage={
-                <View style={{ justifyContent: "center", alignItems: "center", height: "100%" }}>
-                    <Text>Adicionar Produto</Text>
-                </View>
-            }>
+        <View style={{
+            flex: 1,
+            alignItems: 'center',
+            backgroundColor: Colors.dark.icon,
+        }}>
+            <HeaderSearchBar
+                headerMaxHeight={230}
+                headerMinHeight={190}
+                subTitle='Administrativo'
+            />
+            <FlatList
+                data={selectResponse ? Object.values(selectResponse) : []}
+                scrollEventThrottle={16}
+                style={{ width: '95%' }}
+                renderItem={({ item }) => (
+                    <TouchableOpacity onPress={() => handleNavigate(item.id)}>
+                        <ListItem
+                            key={item.id}
+                            title={item.title}
+                            thumb={thumbList[item.id]}
+                        />
+                    </TouchableOpacity>
+                )}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                    />
+                }
+            />
 
-
-
-        </ParallaxScrollView>
+            <Button
+                onPress={() => selectData(initialValue)}
+                mode='contained'
+                style={{ marginVertical: 20 }}
+            >
+                Atualizar Lista
+            </Button>
+        </View>
     );
 }
